@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: block read and write on all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && request.auth.token.email == 'yuwww4952@gmail.com'
+        && request.auth.token.email_verified == true;
+    }
+
+    function isValidCategory(category) {
+      return category is string
+        && category.size() >= 1
+        && category.size() <= 30
+        && category in ['사진 합성', '스타일 변환', '캐릭터·포스터'];
+    }
+
+    function isValidPrompt(data) {
+      return data.keys().hasAll(['title', 'category', 'content', 'createdAt'])
+        && data.keys().hasOnly(['title', 'category', 'content', 'createdAt'])
+        && data.title is string
+        && data.title.size() >= 1
+        && data.title.size() <= 100
+        && isValidCategory(data.category)
+        && data.content is string
+        && data.content.size() >= 1
+        && data.content.size() <= 10000
+        && data.createdAt is timestamp;
+    }
+
+    // Prompts collection: public read for everyone, write only by verified admin
+    match /prompts/{promptId} {
+      allow get: if isValidId(promptId);
+      allow list: if request.query.limit == null || request.query.limit <= 200;
+
+      allow create: if isAdmin()
+        && isValidId(promptId)
+        && isValidPrompt(incoming())
+        && incoming().createdAt == request.time;
+
+      allow update: if isAdmin()
+        && isValidId(promptId)
+        && isValidPrompt(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'category', 'content']);
+
+      allow delete: if isAdmin()
+        && isValidId(promptId);
+    }
+  }
+}

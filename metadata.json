@@ -1,0 +1,8 @@
+{
+  "name": "나의 AI 프롬프트 창고",
+  "description": "초보자를 위한 AI 이미지·캐릭터 프롬프트 모음 창고",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
